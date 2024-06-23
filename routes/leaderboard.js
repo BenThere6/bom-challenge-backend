@@ -7,8 +7,24 @@ const leaderboardPath = path.join(__dirname, '../data/leaderboard.json');
 
 // Helper function to read leaderboard data
 const readLeaderboard = () => {
-  const data = fs.readFileSync(leaderboardPath, 'utf-8');
-  return JSON.parse(data);
+  try {
+    if (!fs.existsSync(leaderboardPath)) {
+      // If the file doesn't exist, create it with an empty array
+      fs.writeFileSync(leaderboardPath, JSON.stringify([]));
+    }
+
+    const data = fs.readFileSync(leaderboardPath, 'utf-8');
+    
+    // If the file is empty, return an empty array
+    if (data.trim() === '') {
+      return [];
+    }
+
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error reading or parsing leaderboard.json:', err);
+    return [];
+  }
 };
 
 // Helper function to write leaderboard data
