@@ -1,0 +1,7 @@
+[build]
+  functions = "functions"
+
+[[redirects]]
+  from = "/leaderboard"
+  to = "/.netlify/functions/leaderboard"
+  status = 200

@@ -1,21 +1,23 @@
-// routes/leaderboard.js
 const express = require('express');
+const serverless = require('serverless-http');
 const fs = require('fs');
 const path = require('path');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+
+const app = express();
 const router = express.Router();
-const leaderboardPath = path.join(__dirname, '../data/leaderboard.json');
+
+const leaderboardPath = path.join(__dirname, 'leaderboard.json');
 
 // Helper function to read leaderboard data
 const readLeaderboard = () => {
   try {
     if (!fs.existsSync(leaderboardPath)) {
-      // If the file doesn't exist, create it with an empty array
       fs.writeFileSync(leaderboardPath, JSON.stringify([]));
     }
 
     const data = fs.readFileSync(leaderboardPath, 'utf-8');
-    
-    // If the file is empty, return an empty array
     if (data.trim() === '') {
       return [];
     }
@@ -32,15 +34,25 @@ const writeLeaderboard = (data) => {
   fs.writeFileSync(leaderboardPath, JSON.stringify(data, null, 2));
 };
 
+// Middleware
+app.use(bodyParser.json());
+app.use(cors());
+
+// Log incoming requests for debugging
+app.use((req, res, next) => {
+  console.log(`${req.method} request for '${req.url}'`);
+  next();
+});
+
 // Get top 10 scores
-router.get('/', (req, res) => {
+router.get('/leaderboard', (req, res) => {
   const leaderboard = readLeaderboard();
   const topScores = leaderboard.sort((a, b) => b.score - a.score).slice(0, 10);
   res.json(topScores);
 });
 
 // Save a new score
-router.post('/', (req, res) => {
+router.post('/leaderboard', (req, res) => {
   const { username, score } = req.body;
   if (!username || typeof score !== 'number') {
     return res.status(400).json({ message: 'Invalid input' });
@@ -54,4 +66,6 @@ router.post('/', (req, res) => {
   res.json(topScores);
 });
 
-module.exports = router;
+app.use('/.netlify/functions/leaderboard', router);
+
+module.exports.handler = serverless(app);
