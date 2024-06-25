@@ -14,15 +14,19 @@ const leaderboardPath = path.join(__dirname, 'leaderboard.json');
 // Helper function to read leaderboard data
 const readLeaderboard = () => {
   try {
+    console.log(`Reading leaderboard data from ${leaderboardPath}`);
     if (!fs.existsSync(leaderboardPath)) {
       fs.writeFileSync(leaderboardPath, JSON.stringify([]));
+      console.log(`Created new leaderboard file at ${leaderboardPath}`);
     }
 
     const data = fs.readFileSync(leaderboardPath, 'utf-8');
     if (data.trim() === '') {
+      console.log('Leaderboard file is empty, returning empty array');
       return [];
     }
 
+    console.log('Leaderboard data read successfully');
     return JSON.parse(data);
   } catch (err) {
     console.error('Error reading or parsing leaderboard.json:', err);
@@ -33,7 +37,9 @@ const readLeaderboard = () => {
 // Helper function to write leaderboard data
 const writeLeaderboard = (data) => {
   try {
+    console.log('Writing leaderboard data to file');
     fs.writeFileSync(leaderboardPath, JSON.stringify(data, null, 2));
+    console.log('Leaderboard data written successfully');
   } catch (err) {
     console.error('Error writing to leaderboard.json:', err);
   }
@@ -65,6 +71,7 @@ router.get('/', (req, res) => {
 router.post('/', (req, res) => {
   const { username, score } = req.body;
   if (!username || typeof score !== 'number') {
+    console.error('Invalid input: username and score are required');
     return res.status(400).json({ message: 'Invalid input: username and score are required' });
   }
 
