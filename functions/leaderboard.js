@@ -1,71 +1,110 @@
-const express = require('express');
-const serverless = require('serverless-http');
-const fs = require('fs');
-const path = require('path');
-const bodyParser = require('body-parser');
-const cors = require('cors');
+import React, { useState, useEffect } from 'react';
+import '../Leaderboard.css';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
 
-const app = express();
-const router = express.Router();
+function Leaderboard({ score, onStartScreen }) {
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [username, setUsername] = useState('');
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [userRank, setUserRank] = useState(null);
 
-const leaderboardPath = path.join(__dirname, 'leaderboard.json');
+  useEffect(() => {
+    fetch('https://your-site.netlify.app/.netlify/functions/leaderboard')
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        setLeaderboard(data);
+        findUserRank(data);
+      })
+      .catch((error) => console.error('Error fetching leaderboard:', error));
+  }, []);
 
-// Helper function to read leaderboard data
-const readLeaderboard = () => {
-  try {
-    if (!fs.existsSync(leaderboardPath)) {
-      fs.writeFileSync(leaderboardPath, JSON.stringify([]));
+  const findUserRank = (data) => {
+    const sortedLeaderboard = [...data].sort((a, b) => b.score - a.score);
+    const userIndex = sortedLeaderboard.findIndex((entry) => entry.username === username && entry.score === score);
+    setUserRank(userIndex !== -1 ? userIndex + 1 : null);
+  };
+
+  const handleSaveScore = (event) => {
+    event.preventDefault(); // Prevent form submission
+
+    if (!username) {
+      console.error('Username is required');
+      return;
     }
 
-    const data = fs.readFileSync(leaderboardPath, 'utf-8');
-    if (data.trim() === '') {
-      return [];
-    }
+    fetch('https://your-site.netlify.app/.netlify/functions/leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, score }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        setLeaderboard(data);
+        setIsSubmitted(true); // Set isSubmitted to true after successful submission
+        findUserRank(data); // Update user's rank after leaderboard update
+      })
+      .catch((error) => console.error('Error saving score:', error));
+  };
 
-    return JSON.parse(data);
-  } catch (err) {
-    console.error('Error reading or parsing leaderboard.json:', err);
-    return [];
-  }
-};
+  const handlePlayAgain = () => {
+    setUsername('');
+    setIsSubmitted(false);
+    onStartScreen(); // Callback to switch to the start screen component
+  };
 
-// Helper function to write leaderboard data
-const writeLeaderboard = (data) => {
-  fs.writeFileSync(leaderboardPath, JSON.stringify(data, null, 2));
-};
+  const isUserInTopTen = (index) => {
+    return userRank !== null && index === userRank - 1;
+  };
 
-// Middleware
-app.use(bodyParser.json());
-app.use(cors());
+  return (
+    <div className="leaderboard-container">
+      <div className="leaderboard">
+        <h2>Your Current Score: {score}</h2>
+        <h2>Leaderboard</h2>
+        <ol>
+          {leaderboard.map((entry, index) => (
+            <li key={index} className={isUserInTopTen(index) ? 'highlighted' : ''}>
+              <span className="rank">{index + 1}.</span>
+              <span className="username">{entry.username}</span>
+              <span className="score">{entry.score}</span>
+            </li>
+          ))}
+        </ol>
+        {isSubmitted ? (
+          <div className="play-again">
+            <Button variant="contained" onClick={handlePlayAgain}>Play Again</Button>
+          </div>
+        ) : (
+          <form onSubmit={handleSaveScore}>
+            <TextField
+              label="Username"
+              variant="outlined"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              fullWidth
+            />
+            <div className="button-container">
+              <Button variant="contained" type="submit">Submit Score</Button>
+              <Button variant="contained" onClick={handlePlayAgain}>Play Again</Button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
 
-// Log incoming requests for debugging
-app.use((req, res, next) => {
-  console.log(`${req.method} request for '${req.url}'`);
-  next();
-});
-
-// Get top 10 scores
-router.get('/leaderboard', (req, res) => {
-  const leaderboard = readLeaderboard();
-  const topScores = leaderboard.sort((a, b) => b.score - a.score).slice(0, 10);
-  res.json(topScores);
-});
-
-// Save a new score
-router.post('/leaderboard', (req, res) => {
-  const { username, score } = req.body;
-  if (!username || typeof score !== 'number') {
-    return res.status(400).json({ message: 'Invalid input' });
-  }
-
-  const leaderboard = readLeaderboard();
-  leaderboard.push({ username, score, created_at: new Date().toISOString() });
-  writeLeaderboard(leaderboard);
-
-  const topScores = leaderboard.sort((a, b) => b.score - a.score).slice(0, 10);
-  res.json(topScores);
-});
-
-app.use('/.netlify/functions/leaderboard', router);
-
-module.exports.handler = serverless(app);
+export default Leaderboard;
