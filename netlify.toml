@@ -3,5 +3,5 @@
 
 [[redirects]]
   from = "/leaderboard"
-  to = "/.netlify/functions/leaderboard"
+  to = "/.netlify/functions/leaderboard/:splat"
   status = 200
