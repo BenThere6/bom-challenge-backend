@@ -32,7 +32,11 @@ const readLeaderboard = () => {
 
 // Helper function to write leaderboard data
 const writeLeaderboard = (data) => {
-  fs.writeFileSync(leaderboardPath, JSON.stringify(data, null, 2));
+  try {
+    fs.writeFileSync(leaderboardPath, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('Error writing to leaderboard.json:', err);
+  }
 };
 
 // Middleware
@@ -47,24 +51,34 @@ app.use((req, res, next) => {
 
 // Get top 10 scores
 router.get('/', (req, res) => {
-  const leaderboard = readLeaderboard();
-  const topScores = leaderboard.sort((a, b) => b.score - a.score).slice(0, 10);
-  res.json(topScores);
+  try {
+    const leaderboard = readLeaderboard();
+    const topScores = leaderboard.sort((a, b) => b.score - a.score).slice(0, 10);
+    res.json(topScores);
+  } catch (err) {
+    console.error('Error retrieving leaderboard:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 // Save a new score
 router.post('/', (req, res) => {
   const { username, score } = req.body;
   if (!username || typeof score !== 'number') {
-    return res.status(400).json({ message: 'Invalid input' });
+    return res.status(400).json({ message: 'Invalid input: username and score are required' });
   }
 
-  const leaderboard = readLeaderboard();
-  leaderboard.push({ username, score, created_at: new Date().toISOString() });
-  writeLeaderboard(leaderboard);
+  try {
+    const leaderboard = readLeaderboard();
+    leaderboard.push({ username, score, created_at: new Date().toISOString() });
+    writeLeaderboard(leaderboard);
 
-  const topScores = leaderboard.sort((a, b) => b.score - a.score).slice(0, 10);
-  res.json(topScores);
+    const topScores = leaderboard.sort((a, b) => b.score - a.score).slice(0, 10);
+    res.json(topScores);
+  } catch (err) {
+    console.error('Error saving score:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 // Use the router for the API routes
