@@ -9,7 +9,7 @@ const app = express();
 const router = express.Router();
 
 // Ensure the leaderboard.json file is located in the correct directory relative to the serverless function.
-const leaderboardPath = path.join(__dirname, 'leaderboard.json');
+const leaderboardPath = path.join('/tmp', 'leaderboard.json');
 
 // Helper function to read leaderboard data
 const readLeaderboard = () => {
