@@ -1,24 +1,17 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const path = require('path');
 
 const app = express();
 const router = express.Router();
 
-// Database setup
-const dbPath = path.join(__dirname, 'leaderboard.db');
-const db = new sqlite3.Database(dbPath);
-
-// Create leaderboard table if it doesn't exist
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS leaderboard (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL,
-    score INTEGER NOT NULL,
-    created_at TEXT NOT NULL
-  )`);
+// Create a new pool using the DATABASE_URL environment variable
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 // Middleware
@@ -32,49 +25,40 @@ app.use((req, res, next) => {
 });
 
 // Get top 10 scores
-router.get('/', (req, res) => {
-  db.all('SELECT username, score, created_at FROM leaderboard ORDER BY score DESC LIMIT 10', (err, rows) => {
-    if (err) {
-      console.error('Error retrieving leaderboard:', err);
-      res.status(500).json({ message: 'Internal server error' });
-      return;
-    }
-    res.json(rows);
-  });
+router.get('/', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT username, score, created_at FROM leaderboard ORDER BY score DESC LIMIT 10');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error retrieving leaderboard:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 // Save a new score
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { username, score } = req.body;
   if (!username || typeof score !== 'number') {
     console.error('Invalid input: username and score are required');
     return res.status(400).json({ message: 'Invalid input: username and score are required' });
   }
 
-  const createdAt = new Date().toISOString();
-  const query = 'INSERT INTO leaderboard (username, score, created_at) VALUES (?, ?, ?)';
-  db.run(query, [username, score, createdAt], function(err) {
-    if (err) {
-      console.error('Error saving score:', err);
-      res.status(500).json({ message: 'Internal server error' });
-      return;
-    }
-
-    db.all('SELECT username, score, created_at FROM leaderboard ORDER BY score DESC LIMIT 10', (err, rows) => {
-      if (err) {
-        console.error('Error retrieving leaderboard:', err);
-        res.status(500).json({ message: 'Internal server error' });
-        return;
-      }
-      res.json(rows);
-    });
-  });
+  try {
+    const result = await pool.query(
+      'INSERT INTO leaderboard (username, score, created_at) VALUES ($1, $2, $3) RETURNING *',
+      [username, score, new Date().toISOString()]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error saving score:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 // Use the router for the API routes
-app.use('/api/leaderboard', router);
+app.use('/leaderboard', router);
 
-// Start the server
+// Export the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
