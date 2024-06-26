@@ -60,6 +60,7 @@ router.get('/', (req, res) => {
   try {
     const leaderboard = readLeaderboard();
     const topScores = leaderboard.sort((a, b) => b.score - a.score).slice(0, 10);
+    console.log('Top scores:', topScores);
     res.json(topScores);
   } catch (err) {
     console.error('Error retrieving leaderboard:', err);
@@ -76,11 +77,13 @@ router.post('/', (req, res) => {
   }
 
   try {
+    console.log('Received new score:', { username, score });
     const leaderboard = readLeaderboard();
     leaderboard.push({ username, score, created_at: new Date().toISOString() });
     writeLeaderboard(leaderboard);
 
     const topScores = leaderboard.sort((a, b) => b.score - a.score).slice(0, 10);
+    console.log('Updated top scores:', topScores);
     res.json(topScores);
   } catch (err) {
     console.error('Error saving score:', err);
