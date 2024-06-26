@@ -42,6 +42,7 @@ const writeLeaderboard = (data) => {
     console.log('Leaderboard data written successfully');
   } catch (err) {
     console.error('Error writing to leaderboard.json:', err);
+    throw err; // Propagate the error back
   }
 };
 
