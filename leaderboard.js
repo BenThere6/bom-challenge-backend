@@ -55,6 +55,17 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Delete all scores
+router.delete('/deletealllehilegacyscoresplease', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM leaderboard');
+    res.status(200).json({ message: 'All scores deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting scores:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Use the router for the API routes
 app.use('/leaderboard', router);
 
