@@ -1,18 +1,13 @@
 const express = require('express');
-const { Pool } = require('pg');
+const mysql = require('mysql2/promise');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 
 const app = express();
 const router = express.Router();
 
-// Create a new pool using the DATABASE_URL environment variable
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
+// Create a new pool using the JAWSDB_URL environment variable
+const pool = mysql.createPool(process.env.JAWSDB_URL);
 
 // Middleware
 app.use(bodyParser.json());
@@ -27,8 +22,8 @@ app.use((req, res, next) => {
 // Get top 10 scores
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT username, score, created_at FROM leaderboard ORDER BY score DESC LIMIT 10');
-    res.json(result.rows);
+    const [rows] = await pool.query('SELECT username, score, created_at FROM leaderboard ORDER BY score DESC LIMIT 10');
+    res.json(rows);
   } catch (err) {
     console.error('Error retrieving leaderboard:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -44,11 +39,12 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const result = await pool.query(
-      'INSERT INTO leaderboard (username, score, created_at) VALUES ($1, $2, $3) RETURNING *',
-      [username, score, new Date().toISOString()]
+    const [result] = await pool.query(
+      'INSERT INTO leaderboard (username, score, created_at) VALUES (?, ?, ?)',
+      [username, score, new Date()]
     );
-    res.json(result.rows[0]);
+    const [newScore] = await pool.query('SELECT * FROM leaderboard WHERE id = ?', [result.insertId]);
+    res.json(newScore[0]);
   } catch (err) {
     console.error('Error saving score:', err);
     res.status(500).json({ message: 'Internal server error' });
