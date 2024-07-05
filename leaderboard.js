@@ -7,7 +7,7 @@ const app = express();
 const router = express.Router();
 
 // Create a new pool using the JAWSDB_URL environment variable
-const pool = mysql.createPool(process.env.JAWSDB_URL);
+const pool = mysql.createPool(process.env.DATABASE_URL);
 
 // Middleware
 app.use(bodyParser.json());
