@@ -2,12 +2,19 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+require('dotenv').config(); // Add this line to load .env variables
 
 const app = express();
 const router = express.Router();
 
-// Create a new pool using the JAWSDB_URL environment variable
-const pool = mysql.createPool(process.env.DATABASE_URL);
+// Create a new pool using the local MySQL environment variables
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT
+});
 
 // Middleware
 app.use(bodyParser.json());
