@@ -8,10 +8,10 @@
     "dev": "nodemon leaderboard.js"
   },
   "dependencies": {
-    "body-parser": "^1.19.0",
+    "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.17.1",
+    "express": "^4.19.2",
     "mysql": "^2.18.1",
     "mysql2": "^3.10.2",
     "pg": "^8.7.1",

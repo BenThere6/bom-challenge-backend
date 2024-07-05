@@ -2,7 +2,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-require('dotenv').config(); // Add this line to load .env variables
+require('dotenv').config(); // Load environment variables from .env
 
 const app = express();
 const router = express.Router();
@@ -18,7 +18,14 @@ const pool = mysql.createPool({
 
 // Middleware
 app.use(bodyParser.json());
-app.use(cors());
+
+// CORS Configuration
+const corsOptions = {
+  origin: 'https://lehislegacy.netlify.app', // Allow only this origin
+  methods: ['GET', 'POST'], // Allow only GET and POST requests
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+};
+app.use(cors(corsOptions));
 
 // Log incoming requests for debugging
 app.use((req, res, next) => {
