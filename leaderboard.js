@@ -33,6 +33,8 @@ router.get('/', async (req, res) => {
 // Save a new score
 router.post('/', async (req, res) => {
   const { username, score } = req.body;
+  
+  // Validate input
   if (!username || typeof score !== 'number') {
     console.error('Invalid input: username and score are required');
     return res.status(400).json({ message: 'Invalid input: username and score are required' });
@@ -43,6 +45,8 @@ router.post('/', async (req, res) => {
       'INSERT INTO leaderboard (username, score, created_at) VALUES (?, ?, ?)',
       [username, score, new Date()]
     );
+    
+    // Fetch the newly inserted score
     const [newScore] = await pool.query('SELECT * FROM leaderboard WHERE id = ?', [result.insertId]);
     res.json(newScore[0]);
   } catch (err) {
@@ -65,7 +69,7 @@ router.delete('/deletealllehilegacyscoresplease', async (req, res) => {
 // Use the router for the API routes
 app.use('/leaderboard', router);
 
-// Export the server
+// Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
