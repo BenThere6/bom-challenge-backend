@@ -20,11 +20,23 @@ const pool = mysql.createPool({
 app.use(bodyParser.json());
 
 // CORS Configuration
+const allowedOrigins = [
+  'https://lehislegacy.netlify.app', // Production
+  'http://localhost:5173' // Development
+];
+
 const corsOptions = {
-  origin: 'https://lehislegacy.netlify.app', // Allow only this origin
-  methods: ['GET', 'POST'], // Allow only GET and POST requests
-  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST'],
+  optionsSuccessStatus: 200
 };
+
 app.use(cors(corsOptions));
 
 // Log incoming requests for debugging
