@@ -19,12 +19,14 @@ const pool = mysql.createPool({
 // Middleware
 app.use(bodyParser.json());
 
+// CORS Configuration
 const corsOptions = {
   origin: (origin, callback) => {
-    callback(null, true); // Allow all origins
+    // Allow requests from specified origins or allow all origins with '*'
+    callback(null, true);
   },
   methods: ['GET', 'POST'], // Specify the methods you want to allow
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
 app.use(cors(corsOptions));
@@ -34,6 +36,8 @@ app.use((req, res, next) => {
   console.log(`${req.method} request for '${req.url}'`);
   next();
 });
+
+// API Routes
 
 // Get top 10 scores
 router.get('/', async (req, res) => {
