@@ -18,7 +18,6 @@ const pool = mysql.createPool({
 
 // Middleware
 app.use(bodyParser.json());
-
 app.use(cors());
 
 // Log incoming requests for debugging
