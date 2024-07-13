@@ -21,10 +21,7 @@ app.use(bodyParser.json());
 
 // CORS Configuration
 const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests from specified origins or allow all origins with '*'
-    callback(null, true);
-  },
+  origin: 'http://localhost:5173',
   methods: ['GET', 'POST'], // Specify the methods you want to allow
   optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 };
