@@ -27,12 +27,12 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } 
-    // else {
+    // if (!origin || allowedOrigins.includes(origin)) {
+    //   callback(null, true);
+    // } else {
     //   callback(new Error('Not allowed by CORS'));
     // }
+    callback(null, true);
   },
   methods: ['GET', 'POST'],
   optionsSuccessStatus: 200
