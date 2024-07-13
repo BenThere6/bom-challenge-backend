@@ -19,22 +19,11 @@ const pool = mysql.createPool({
 // Middleware
 app.use(bodyParser.json());
 
-// CORS Configuration
-const allowedOrigins = [
-  'https://lehislegacy.netlify.app', // Production
-  'http://localhost:5173' // Development
-];
-
 const corsOptions = {
   origin: (origin, callback) => {
-    // if (!origin || allowedOrigins.includes(origin)) {
-    //   callback(null, true);
-    // } else {
-    //   callback(new Error('Not allowed by CORS'));
-    // }
-    callback(null, true);
+    callback(null, true); // Allow all origins
   },
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST'], // Specify the methods you want to allow
   optionsSuccessStatus: 200
 };
 
