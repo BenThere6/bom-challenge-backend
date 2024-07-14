@@ -31,7 +31,7 @@ app.use((req, res, next) => {
 // Get top 10 scores
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT username, score, created_at FROM leaderboard ORDER BY score DESC LIMIT 10');
+    const [rows] = await pool.query('SELECT username, score, created_at FROM leaderboard ORDER BY score DESC LIMIT 100');
     res.json(rows);
   } catch (err) {
     console.error('Error retrieving leaderboard:', err);
