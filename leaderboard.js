@@ -27,7 +27,7 @@ const corsOptions = {
   allowedHeaders: ['Content-Type']
 };
 
-app.use(cors(corsOptions));
+app.use(cors());
 
 // Log incoming requests for debugging
 app.use((req, res, next) => {
