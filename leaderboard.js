@@ -18,7 +18,16 @@ const pool = mysql.createPool({
 
 // Middleware
 app.use(bodyParser.json());
-app.use(cors());
+
+// CORS Configuration
+const corsOptions = {
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST'], // Specify the methods you want to allow
+  optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
+  allowedHeaders: ['Content-Type']
+};
+
+app.use(cors(corsOptions));
 
 // Log incoming requests for debugging
 app.use((req, res, next) => {
@@ -28,19 +37,21 @@ app.use((req, res, next) => {
 
 // API Routes
 
-// Get top 10 scores
-router.get('/', async (req, res) => {
+// Get top 10 scores for a specific difficulty and category
+router.get('/:difficulty/:category', async (req, res) => {
+  const { difficulty, category } = req.params;
   try {
-    const [rows] = await pool.query('SELECT username, score, created_at FROM leaderboard WHERE score > 0 ORDER BY score DESC LIMIT 1000');
+    const [rows] = await pool.query('SELECT username, score, created_at FROM leaderboard WHERE difficulty = ? AND category = ? ORDER BY score DESC LIMIT 10', [difficulty, category]);
     res.json(rows);
   } catch (err) {
-    console.error('Error retrieving leaderboard:', err);
+    console.error(`Error retrieving ${difficulty}-${category} leaderboard:`, err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-// Save a new score
-router.post('/', async (req, res) => {
+// Save a new score for a specific difficulty and category
+router.post('/:difficulty/:category', async (req, res) => {
+  const { difficulty, category } = req.params;
   const { username, score } = req.body;
   
   // Validate input
@@ -51,26 +62,27 @@ router.post('/', async (req, res) => {
 
   try {
     const [result] = await pool.query(
-      'INSERT INTO leaderboard (username, score, created_at) VALUES (?, ?, ?)',
-      [username, score, new Date()]
+      'INSERT INTO leaderboard (username, score, difficulty, category, created_at) VALUES (?, ?, ?, ?, ?)',
+      [username, score, difficulty, category, new Date()]
     );
     
     // Fetch the newly inserted score
     const [newScore] = await pool.query('SELECT * FROM leaderboard WHERE id = ?', [result.insertId]);
     res.json(newScore[0]);
   } catch (err) {
-    console.error('Error saving score:', err);
+    console.error(`Error saving score for ${difficulty}-${category}:`, err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-// Delete all scores
-router.delete('/deletealllehilegacyscoresplease', async (req, res) => {
+// Delete all scores for a specific difficulty and category
+router.delete('/:difficulty/:category/deleteall', async (req, res) => {
+  const { difficulty, category } = req.params;
   try {
-    await pool.query('DELETE FROM leaderboard');
-    res.status(200).json({ message: 'All scores deleted successfully' });
+    await pool.query('DELETE FROM leaderboard WHERE difficulty = ? AND category = ?', [difficulty, category]);
+    res.status(200).json({ message: `All scores for ${difficulty}-${category} deleted successfully` });
   } catch (err) {
-    console.error('Error deleting scores:', err);
+    console.error(`Error deleting scores for ${difficulty}-${category}:`, err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
