@@ -18,7 +18,6 @@ const pool = mysql.createPool({
 
 // Middleware
 app.use(bodyParser.json());
-
 app.use(cors());
 
 // Log incoming requests for debugging
@@ -75,6 +74,44 @@ router.delete('/:difficulty/:category/deleteall', async (req, res) => {
     res.status(200).json({ message: `All scores for ${difficulty}-${category} deleted successfully` });
   } catch (err) {
     console.error(`Error deleting scores for ${difficulty}-${category}:`, err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Feedback Routes
+
+// Get all feedback sorted from recent to old
+router.get('/feedback', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT username, feedback, created_at FROM feedback ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    console.error('Error retrieving feedback:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Post new feedback
+router.post('/feedback', async (req, res) => {
+  const { username, feedback } = req.body;
+  
+  // Validate input
+  if (!username || !feedback) {
+    console.error('Invalid input: username and feedback are required');
+    return res.status(400).json({ message: 'Invalid input: username and feedback are required' });
+  }
+
+  try {
+    const [result] = await pool.query(
+      'INSERT INTO feedback (username, feedback, created_at) VALUES (?, ?, ?)',
+      [username, feedback, new Date()]
+    );
+    
+    // Fetch the newly inserted feedback
+    const [newFeedback] = await pool.query('SELECT * FROM feedback WHERE id = ?', [result.insertId]);
+    res.json(newFeedback[0]);
+  } catch (err) {
+    console.error('Error saving feedback:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
