@@ -19,14 +19,6 @@ const pool = mysql.createPool({
 // Middleware
 app.use(bodyParser.json());
 
-// CORS Configuration
-const corsOptions = {
-  origin: 'http://localhost:5173',
-  methods: ['GET', 'POST'], // Specify the methods you want to allow
-  optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
-  allowedHeaders: ['Content-Type']
-};
-
 app.use(cors());
 
 // Log incoming requests for debugging
