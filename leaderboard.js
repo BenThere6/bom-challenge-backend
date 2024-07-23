@@ -22,19 +22,7 @@ const pool = mysql.createPool({
 app.use(bodyParser.json());
 
 // Use CORS middleware
-app.use(cors({
-  origin: 'http://localhost:5173', // Replace with the URL of your frontend
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
-}));
-
-// Manually set CORS headers
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  next();
-});
+app.use(cors());
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
@@ -70,7 +58,6 @@ router.post('/register', async (req, res) => {
 
 // User login
 router.post('/login', async (req, res) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -119,7 +106,6 @@ const authenticateAdmin = (req, res, next) => {
 
 // Admin routes
 router.get('/admin/feedback', authenticateAdmin, async (req, res) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
   try {
     const [rows] = await pool.query('SELECT * FROM feedback ORDER BY created_at DESC');
     res.json(rows);
@@ -130,7 +116,6 @@ router.get('/admin/feedback', authenticateAdmin, async (req, res) => {
 });
 
 router.get('/admin/unique-users', authenticateAdmin, async (req, res) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
   try {
     const [rows] = await pool.query('SELECT COUNT(DISTINCT username) AS unique_users FROM users');
     res.json(rows[0]);
@@ -141,7 +126,6 @@ router.get('/admin/unique-users', authenticateAdmin, async (req, res) => {
 });
 
 router.get('/admin/scores', authenticateAdmin, async (req, res) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
   try {
     const [rows] = await pool.query('SELECT * FROM leaderboard ORDER BY created_at DESC');
     res.json(rows);
