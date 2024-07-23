@@ -20,11 +20,9 @@ const pool = mysql.createPool({
 
 // Middleware
 app.use(bodyParser.json());
-
-// Use CORS middleware
 app.use(cors());
 
-// Manually set CORS headers for all requests
+// Manually set CORS headers for all responses
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
