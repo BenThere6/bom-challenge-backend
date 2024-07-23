@@ -44,6 +44,7 @@ router.post('/register', async (req, res) => {
   const { username, password, role } = req.body; // Add role to request body
 
   if (!username || !password || !role) {
+    console.log('Invalid registration input:', req.body);
     return res.status(400).json({ message: 'Username, password, and role are required' });
   }
 
@@ -67,6 +68,7 @@ router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
+    console.log('Invalid login input:', req.body);
     return res.status(400).json({ message: 'Username and password are required' });
   }
 
@@ -75,6 +77,7 @@ router.post('/login', async (req, res) => {
     const user = rows[0];
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
+      console.log('Invalid username or password for user:', username);
       return res.status(401).json({ message: 'Invalid username or password' });
     }
 
@@ -91,17 +94,20 @@ const authenticateAdmin = (req, res, next) => {
   const authHeader = req.headers['authorization'];
 
   if (!authHeader) {
+    console.log('Authorization header is missing');
     return res.status(401).json({ message: 'Authorization header is missing' });
   }
 
   const token = authHeader.split(' ')[1];
 
   if (!token) {
+    console.log('Token is missing in authorization header');
     return res.status(401).json({ message: 'Token is missing' });
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err || user.role !== 'admin') {
+      console.log('Invalid token or user is not admin:', err);
       return res.status(403).json({ message: 'Forbidden' });
     }
 
