@@ -1,23 +1,33 @@
-const axios = require('axios');
+const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
 
 const registerAdmin = async () => {
-  const username = 'admin';
-  const password = process.env.ADMIN_PASS;
+  const username = 'admin'; // Set your desired admin username
+  const password = process.env.ADMIN_PASS; // Set your desired admin password
   const role = 'admin';
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT
+  });
 
   try {
-    const response = await axios.post(`https://bens-api-dd63362f50db.herokuapp.com/leaderboard/register`, {
-      username,
-      password: hashedPassword,
-      role,
-    });
-    console.log('Admin registered successfully:', response.data);
-  } catch (error) {
-    console.error('Error registering admin:', error.response ? error.response.data : error.message);
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const [rows] = await pool.query(
+      'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+      [username, hashedPassword, role]
+    );
+
+    console.log('Admin registered successfully');
+  } catch (err) {
+    console.error('Error registering admin:', err);
+  } finally {
+    await pool.end();
   }
 };
 
