@@ -1,9 +1,10 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
 const bodyParser = require('body-parser');
-const cors = require('cors');
-require('dotenv').config();
-const { authenticateToken, authenticateAdmin } = require('./authMiddleware');
+const cors = require('cors'); // Import the CORS package
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+require('dotenv').config(); // Load environment variables from .env
 
 const app = express();
 const router = express.Router();
@@ -19,7 +20,14 @@ const pool = mysql.createPool({
 
 // Middleware
 app.use(bodyParser.json());
-app.use(cors());
+
+// Use CORS middleware
+app.use(cors({
+  origin: 'http://localhost:5173'
+}));
+
+// JWT Secret
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
 // Log incoming requests for debugging
 app.use((req, res, next) => {
@@ -27,62 +35,81 @@ app.use((req, res, next) => {
   next();
 });
 
-// API Routes
+// User registration
+router.post('/register', async (req, res) => {
+  const { username, password, role } = req.body; // Add role to request body
 
-// Get top 10 scores for a specific difficulty and category
-router.get('/:difficulty/:category', async (req, res) => {
-  const { difficulty, category } = req.params;
-  try {
-    const [rows] = await pool.query('SELECT username, score, created_at FROM leaderboard WHERE difficulty = ? AND category = ? ORDER BY score DESC LIMIT 10', [difficulty, category]);
-    res.json(rows);
-  } catch (err) {
-    console.error(`Error retrieving ${difficulty}-${category} leaderboard:`, err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// Save a new score for a specific difficulty and category
-router.post('/:difficulty/:category', async (req, res) => {
-  const { difficulty, category } = req.params;
-  const { username, score } = req.body;
-  
-  // Validate input
-  if (!username || typeof score !== 'number') {
-    console.error('Invalid input: username and score are required');
-    return res.status(400).json({ message: 'Invalid input: username and score are required' });
+  if (!username || !password || !role) {
+    return res.status(400).json({ message: 'Username, password, and role are required' });
   }
 
   try {
-    const [result] = await pool.query(
-      'INSERT INTO leaderboard (username, score, difficulty, category, created_at) VALUES (?, ?, ?, ?, ?)',
-      [username, score, difficulty, category, new Date()]
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await pool.query(
+      'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+      [username, hashedPassword, role]
     );
-    
-    // Fetch the newly inserted score
-    const [newScore] = await pool.query('SELECT * FROM leaderboard WHERE id = ?', [result.insertId]);
-    res.json(newScore[0]);
+
+    res.status(201).json({ message: 'User registered successfully' });
   } catch (err) {
-    console.error(`Error saving score for ${difficulty}-${category}:`, err);
+    console.error('Error registering user:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-// Delete all scores for a specific difficulty and category
-router.delete('/:difficulty/:category/deleteall', async (req, res) => {
-  const { difficulty, category } = req.params;
+// User login
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Username and password are required' });
+  }
+
   try {
-    await pool.query('DELETE FROM leaderboard WHERE difficulty = ? AND category = ?', [difficulty, category]);
-    res.status(200).json({ message: `All scores for ${difficulty}-${category} deleted successfully` });
+    const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
+    const user = rows[0];
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+    res.json({ token });
   } catch (err) {
-    console.error(`Error deleting scores for ${difficulty}-${category}:`, err);
+    console.error('Error logging in user:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-// Admin Routes
+// Middleware to protect admin routes
+const authenticateAdmin = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+
+  if (!authHeader) {
+    return res.status(401).json({ message: 'Authorization header is missing' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Token is missing' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err || user.role !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    req.user = user;
+    next();
+  });
+};
+
+// Admin routes
 router.get('/admin/feedback', authenticateAdmin, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT username, feedback, created_at FROM feedback ORDER BY created_at DESC');
+    const [rows] = await pool.query('SELECT * FROM feedback ORDER BY created_at DESC');
     res.json(rows);
   } catch (err) {
     console.error('Error retrieving feedback:', err);
@@ -92,7 +119,7 @@ router.get('/admin/feedback', authenticateAdmin, async (req, res) => {
 
 router.get('/admin/unique-users', authenticateAdmin, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT COUNT(DISTINCT username) AS unique_users FROM leaderboard');
+    const [rows] = await pool.query('SELECT COUNT(DISTINCT username) AS unique_users FROM users');
     res.json(rows[0]);
   } catch (err) {
     console.error('Error retrieving unique users:', err);
@@ -102,7 +129,7 @@ router.get('/admin/unique-users', authenticateAdmin, async (req, res) => {
 
 router.get('/admin/scores', authenticateAdmin, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT username, score, difficulty, category, created_at FROM leaderboard ORDER BY created_at DESC');
+    const [rows] = await pool.query('SELECT * FROM leaderboard ORDER BY created_at DESC');
     res.json(rows);
   } catch (err) {
     console.error('Error retrieving scores:', err);
