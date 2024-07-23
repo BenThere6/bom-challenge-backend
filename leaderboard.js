@@ -22,7 +22,7 @@ const pool = mysql.createPool({
 app.use(bodyParser.json());
 
 // Use CORS middleware
-app.use(cors());
+// app.use(cors());
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
