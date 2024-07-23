@@ -2,7 +2,8 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-require('dotenv').config(); // Load environment variables from .env
+require('dotenv').config();
+const { authenticateToken, authenticateAdmin } = require('./authMiddleware');
 
 const app = express();
 const router = express.Router();
@@ -78,10 +79,8 @@ router.delete('/:difficulty/:category/deleteall', async (req, res) => {
   }
 });
 
-// Feedback Routes
-
-// Get all feedback sorted from recent to old
-router.get('/feedback', async (req, res) => {
+// Admin Routes
+router.get('/admin/feedback', authenticateAdmin, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT username, feedback, created_at FROM feedback ORDER BY created_at DESC');
     res.json(rows);
@@ -91,10 +90,30 @@ router.get('/feedback', async (req, res) => {
   }
 });
 
-// Post new feedback
+router.get('/admin/unique-users', authenticateAdmin, async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT COUNT(DISTINCT username) AS unique_users FROM leaderboard');
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error retrieving unique users:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+router.get('/admin/scores', authenticateAdmin, async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT username, score, difficulty, category, created_at FROM leaderboard ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    console.error('Error retrieving scores:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Feedback Route
 router.post('/feedback', async (req, res) => {
   const { username, feedback } = req.body;
-  
+
   // Validate input
   if (!username || !feedback) {
     console.error('Invalid input: username and feedback are required');
