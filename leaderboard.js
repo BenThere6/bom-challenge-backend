@@ -132,10 +132,11 @@ adminRouter.get('/feedback', authenticateAdmin, async (req, res) => {
 adminRouter.get('/unique-users', authenticateAdmin, async (req, res) => {
   console.log('GET request for /admin/unique-users');
   try {
-    const [rows] = await pool.query('SELECT COUNT(DISTINCT username) AS unique_users FROM users');
+    const [rows] = await pool.query('SELECT COUNT(DISTINCT username) AS unique_users FROM leaderboard');
+    console.log('Unique usernames in leaderboard query result:', rows); // Add this line to check the result
     res.json(rows[0]);
   } catch (err) {
-    console.error('Error retrieving unique users:', err);
+    console.error('Error retrieving unique usernames in leaderboard:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
