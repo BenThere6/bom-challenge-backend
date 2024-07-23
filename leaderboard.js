@@ -1,7 +1,7 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
 const bodyParser = require('body-parser');
-const cors = require('cors'); // Import the CORS package
+const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 require('dotenv').config(); // Load environment variables from .env
@@ -22,7 +22,17 @@ const pool = mysql.createPool({
 app.use(bodyParser.json());
 
 // Use CORS middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173' // Replace with the URL of your frontend
+}));
+
+// Manually set CORS headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  next();
+});
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
@@ -131,31 +141,6 @@ router.get('/admin/scores', authenticateAdmin, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('Error retrieving scores:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// Feedback Route
-router.post('/feedback', async (req, res) => {
-  const { username, feedback } = req.body;
-
-  // Validate input
-  if (!username || !feedback) {
-    console.error('Invalid input: username and feedback are required');
-    return res.status(400).json({ message: 'Invalid input: username and feedback are required' });
-  }
-
-  try {
-    const [result] = await pool.query(
-      'INSERT INTO feedback (username, feedback, created_at) VALUES (?, ?, ?)',
-      [username, feedback, new Date()]
-    );
-    
-    // Fetch the newly inserted feedback
-    const [newFeedback] = await pool.query('SELECT * FROM feedback WHERE id = ?', [result.insertId]);
-    res.json(newFeedback[0]);
-  } catch (err) {
-    console.error('Error saving feedback:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
