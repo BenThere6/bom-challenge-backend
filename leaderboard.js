@@ -7,7 +7,8 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config(); // Load environment variables from .env
 
 const app = express();
-const router = express.Router();
+const leaderboardRouter = express.Router();
+const adminRouter = express.Router();
 
 // Create a new pool using the local MySQL environment variables
 const pool = mysql.createPool({
@@ -39,57 +40,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// User registration
-router.post('/register', async (req, res) => {
-  const { username, password, role } = req.body; // Add role to request body
-
-  if (!username || !password || !role) {
-    console.log('Invalid registration input:', req.body);
-    return res.status(400).json({ message: 'Username, password, and role are required' });
-  }
-
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    await pool.query(
-      'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
-      [username, hashedPassword, role]
-    );
-
-    res.status(201).json({ message: 'User registered successfully' });
-  } catch (err) {
-    console.error('Error registering user:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// User login
-router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-
-  if (!username || !password) {
-    console.log('Invalid login input:', req.body);
-    return res.status(400).json({ message: 'Username and password are required' });
-  }
-
-  try {
-    const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
-    const user = rows[0];
-
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      console.log('Invalid username or password for user:', username);
-      return res.status(401).json({ message: 'Invalid username or password' });
-    }
-
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token });
-  } catch (err) {
-    console.error('Error logging in user:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// Middleware to protect admin routes
+// Export pool and authenticateAdmin for reuse in other modules
 const authenticateAdmin = (req, res, next) => {
   const authHeader = req.headers['authorization'];
 
@@ -116,8 +67,59 @@ const authenticateAdmin = (req, res, next) => {
   });
 };
 
+// User registration
+leaderboardRouter.post('/register', async (req, res) => {
+  const { username, password, role } = req.body; // Add role to request body
+
+  if (!username || !password || !role) {
+    console.log('Invalid registration input:', req.body);
+    return res.status(400).json({ message: 'Username, password, and role are required' });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await pool.query(
+      'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+      [username, hashedPassword, role]
+    );
+
+    res.status(201).json({ message: 'User registered successfully' });
+  } catch (err) {
+    console.error('Error registering user:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// User login
+leaderboardRouter.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    console.log('Invalid login input:', req.body);
+    return res.status(400).json({ message: 'Username and password are required' });
+  }
+
+  try {
+    const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
+    const user = rows[0];
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      console.log('Invalid username or password for user:', username);
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+    res.json({ token });
+  } catch (err) {
+    console.error('Error logging in user:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Admin routes
-router.get('/admin/feedback', authenticateAdmin, async (req, res) => {
+adminRouter.get('/feedback', authenticateAdmin, async (req, res) => {
+  console.log('GET request for /admin/feedback');
   try {
     const [rows] = await pool.query('SELECT * FROM feedback ORDER BY created_at DESC');
     res.json(rows);
@@ -127,7 +129,8 @@ router.get('/admin/feedback', authenticateAdmin, async (req, res) => {
   }
 });
 
-router.get('/admin/unique-users', authenticateAdmin, async (req, res) => {
+adminRouter.get('/unique-users', authenticateAdmin, async (req, res) => {
+  console.log('GET request for /admin/unique-users');
   try {
     const [rows] = await pool.query('SELECT COUNT(DISTINCT username) AS unique_users FROM users');
     res.json(rows[0]);
@@ -137,7 +140,8 @@ router.get('/admin/unique-users', authenticateAdmin, async (req, res) => {
   }
 });
 
-router.get('/admin/scores', authenticateAdmin, async (req, res) => {
+adminRouter.get('/scores', authenticateAdmin, async (req, res) => {
+  console.log('GET request for /admin/scores');
   try {
     const [rows] = await pool.query('SELECT * FROM leaderboard ORDER BY created_at DESC');
     res.json(rows);
@@ -148,7 +152,7 @@ router.get('/admin/scores', authenticateAdmin, async (req, res) => {
 });
 
 // Leaderboard routes
-router.get('/:difficulty/:category', async (req, res) => {
+leaderboardRouter.get('/:difficulty/:category', async (req, res) => {
   const { difficulty, category } = req.params;
   console.log(`GET request for leaderboard with difficulty: ${difficulty} and category: ${category}`);
   try {
@@ -161,7 +165,7 @@ router.get('/:difficulty/:category', async (req, res) => {
 });
 
 // Save a new score for a specific difficulty and category
-router.post('/:difficulty/:category', async (req, res) => {
+leaderboardRouter.post('/:difficulty/:category', async (req, res) => {
   const { difficulty, category } = req.params;
   const { username, score } = req.body;
   
@@ -187,7 +191,7 @@ router.post('/:difficulty/:category', async (req, res) => {
 });
 
 // Delete all scores for a specific difficulty and category
-router.delete('/:difficulty/:category/deleteall', async (req, res) => {
+leaderboardRouter.delete('/:difficulty/:category/deleteall', async (req, res) => {
   const { difficulty, category } = req.params;
   try {
     await pool.query('DELETE FROM leaderboard WHERE difficulty = ? AND category = ?', [difficulty, category]);
@@ -198,8 +202,9 @@ router.delete('/:difficulty/:category/deleteall', async (req, res) => {
   }
 });
 
-// Use the router for the API routes
-app.use('/leaderboard', router);
+// Use the routers for the API routes
+app.use('/leaderboard', leaderboardRouter);
+app.use('/admin', adminRouter);
 
 // Start the server
 const PORT = process.env.PORT || 3000;
