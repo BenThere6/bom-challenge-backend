@@ -9,6 +9,7 @@ require('dotenv').config(); // Load environment variables from .env
 const app = express();
 const leaderboardRouter = express.Router();
 const adminRouter = express.Router();
+const feedbackRouter = express.Router();
 
 // Create a new pool using the local MySQL environment variables
 const pool = mysql.createPool({
@@ -203,9 +204,32 @@ leaderboardRouter.delete('/:difficulty/:category/deleteall', async (req, res) =>
   }
 });
 
+// POST feedback
+feedbackRouter.post('/', async (req, res) => {
+  const { username, feedback } = req.body;
+
+  if (!username || !feedback) {
+    console.log('Invalid feedback input:', req.body);
+    return res.status(400).json({ message: 'Username and feedback are required' });
+  }
+
+  try {
+    await pool.query(
+      'INSERT INTO feedback (username, feedback, created_at) VALUES (?, ?, ?)',
+      [username, feedback, new Date()]
+    );
+
+    res.status(201).json({ message: 'Feedback submitted successfully' });
+  } catch (err) {
+    console.error('Error submitting feedback:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Use the routers for the API routes
 app.use('/leaderboard', leaderboardRouter);
 app.use('/admin', adminRouter);
+app.use('/feedback', feedbackRouter);
 
 // Start the server
 const PORT = process.env.PORT || 3000;
