@@ -15,6 +15,31 @@ router.get('/feedback', authenticateAdmin, async (req, res) => {
   }
 });
 
+// Delete a specific feedback
+router.delete('/feedback/:id', authenticateAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      await pool.query('DELETE FROM feedback WHERE id = ?', [id]);
+      res.status(200).json({ message: 'Feedback deleted successfully' });
+    } catch (err) {
+      console.error('Error deleting feedback:', err);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  // Delete a specific score
+  router.delete('/scores/:id', authenticateAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      await pool.query('DELETE FROM leaderboard WHERE id = ?', [id]);
+      res.status(200).json({ message: 'Score deleted successfully' });
+    } catch (err) {
+      console.error('Error deleting score:', err);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+
 router.get('/unique-users', authenticateAdmin, async (req, res) => {
   console.log('GET request for /admin/unique-users');
   try {
