@@ -153,6 +153,30 @@ adminRouter.get('/scores', authenticateAdmin, async (req, res) => {
   }
 });
 
+// Delete a specific feedback
+router.delete('/feedback/:id', authenticateAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM feedback WHERE id = ?', [id]);
+    res.status(200).json({ message: 'Feedback deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting feedback:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Delete a specific score
+router.delete('/scores/:id', authenticateAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM leaderboard WHERE id = ?', [id]);
+    res.status(200).json({ message: 'Score deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting score:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Leaderboard routes
 leaderboardRouter.get('/:difficulty/:category', async (req, res) => {
   const { difficulty, category } = req.params;
@@ -170,7 +194,7 @@ leaderboardRouter.get('/:difficulty/:category', async (req, res) => {
 leaderboardRouter.post('/:difficulty/:category', async (req, res) => {
   const { difficulty, category } = req.params;
   const { username, score } = req.body;
-  
+
   // Validate input
   if (!username || typeof score !== 'number') {
     console.error('Invalid input: username and score are required');
@@ -182,7 +206,7 @@ leaderboardRouter.post('/:difficulty/:category', async (req, res) => {
       'INSERT INTO leaderboard (username, score, difficulty, category, created_at) VALUES (?, ?, ?, ?, ?)',
       [username, score, difficulty, category, new Date()]
     );
-    
+
     // Fetch the newly inserted score
     const [newScore] = await pool.query('SELECT * FROM leaderboard WHERE id = ?', [result.insertId]);
     res.json(newScore[0]);
