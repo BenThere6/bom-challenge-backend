@@ -4,7 +4,6 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const cookieParser = require('cookie-parser');
 require('dotenv').config(); // Load environment variables from .env
 
 const app = express();
@@ -23,19 +22,13 @@ const pool = mysql.createPool({
 
 // Middleware
 app.use(bodyParser.json());
-app.use(cookieParser());
+app.use(cors());
 
-// Custom CORS middleware to allow multiple origins
-const allowedOrigins = ['http://localhost:5173', 'https://lehislegacy.netlify.app', 'https://lehislegacy.com'];
-
+// Manually set CORS headers for all responses
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
+  res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
@@ -45,36 +38,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 // Log incoming requests for debugging
 app.use((req, res, next) => {
   console.log(`${req.method} request for '${req.url}'`);
-  next();
-});
-
-// Middleware to track unique visitors and retention
-app.use(async (req, res, next) => {
-  const token = req.cookies.user_token;
-
-  if (!token) {
-    // Generate a new token and set it in cookies
-    const newToken = jwt.sign({ timestamp: Date.now() }, JWT_SECRET, { expiresIn: '30d' });
-    res.cookie('user_token', newToken, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
-
-    // Save new user to the database
-    await pool.query(
-      'INSERT INTO users (token, created_at) VALUES (?, ?)',
-      [newToken, new Date()]
-    );
-
-    req.newVisitor = true;
-  } else {
-    const [user] = await pool.query('SELECT * FROM users WHERE token = ?', [token]);
-    if (!user[0]) {
-      // Handle invalid or expired token
-      res.clearCookie('user_token');
-      return next();
-    }
-    req.user = user[0];
-    req.newVisitor = false;
-  }
-
   next();
 });
 
@@ -222,7 +185,7 @@ leaderboardRouter.get('/:difficulty/:category', async (req, res) => {
     const [rows] = await pool.query('SELECT username, score, created_at FROM leaderboard WHERE difficulty = ? AND category = ? ORDER BY score DESC LIMIT 10', [difficulty, category]);
     res.json(rows);
   } catch (err) {
-    console.error(`Error retrieving ${difficulty}-${category} leaderboard:`, err);
+    console.error(`Error retrieving ${difficulty}-${category} leaderboard:, err`);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -248,7 +211,7 @@ leaderboardRouter.post('/:difficulty/:category', async (req, res) => {
     const [newScore] = await pool.query('SELECT * FROM leaderboard WHERE id = ?', [result.insertId]);
     res.json(newScore[0]);
   } catch (err) {
-    console.error(`Error saving score for ${difficulty}-${category}:`, err);
+    console.error(`Error saving score for ${difficulty}-${category}:, err`);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -283,24 +246,6 @@ feedbackRouter.post('/', async (req, res) => {
     res.status(201).json({ message: 'Feedback submitted successfully' });
   } catch (err) {
     console.error('Error submitting feedback:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// Retention Rate route
-adminRouter.get('/retention-rate', authenticateAdmin, async (req, res) => {
-  try {
-    const [users] = await pool.query('SELECT COUNT(id) as total_users FROM users');
-    const [returningUsers] = await pool.query('SELECT COUNT(DISTINCT token) as returning_users FROM users WHERE DATE_SUB(NOW(), INTERVAL 30 DAY) <= created_at');
-
-    const totalUsers = users[0].total_users;
-    const returningUsersCount = returningUsers[0].returning_users;
-
-    const retentionRate = (returningUsersCount / totalUsers) * 100;
-
-    res.json({ retentionRate: retentionRate.toFixed(2) });
-  } catch (err) {
-    console.error('Error calculating retention rate:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
