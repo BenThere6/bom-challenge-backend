@@ -154,7 +154,7 @@ adminRouter.get('/scores', authenticateAdmin, async (req, res) => {
 });
 
 // Delete a specific feedback
-router.delete('/feedback/:id', authenticateAdmin, async (req, res) => {
+adminRouter.delete('/feedback/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   try {
     await pool.query('DELETE FROM feedback WHERE id = ?', [id]);
@@ -166,7 +166,7 @@ router.delete('/feedback/:id', authenticateAdmin, async (req, res) => {
 });
 
 // Delete a specific score
-router.delete('/scores/:id', authenticateAdmin, async (req, res) => {
+adminRouter.delete('/scores/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   try {
     await pool.query('DELETE FROM leaderboard WHERE id = ?', [id]);
