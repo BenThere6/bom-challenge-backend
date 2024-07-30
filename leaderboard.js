@@ -4,7 +4,6 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const cookieParser = require('cookie-parser');
 require('dotenv').config(); // Load environment variables from .env
 
 const app = express();
@@ -23,18 +22,13 @@ const pool = mysql.createPool({
 
 // Middleware
 app.use(bodyParser.json());
-app.use(cors({
-  origin: 'http://localhost:5173', // Replace with your frontend URL
-  credentials: true
-}));
-app.use(cookieParser());
+app.use(cors());
 
 // Manually set CORS headers for all responses
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:5173'); // Replace with your frontend URL
+  res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
@@ -124,36 +118,6 @@ leaderboardRouter.post('/login', async (req, res) => {
   }
 });
 
-// Middleware to track unique visitors and retention
-app.use(async (req, res, next) => {
-  const token = req.cookies.user_token;
-
-  if (!token) {
-    // Generate a new token and set it in cookies
-    const newToken = jwt.sign({ timestamp: Date.now() }, JWT_SECRET, { expiresIn: '30d' });
-    res.cookie('user_token', newToken, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
-
-    // Save new user to the database
-    await pool.query(
-      'INSERT INTO users (token, created_at) VALUES (?, ?)',
-      [newToken, new Date()]
-    );
-
-    req.newVisitor = true;
-  } else {
-    const [user] = await pool.query('SELECT * FROM users WHERE token = ?', [token]);
-    if (!user[0]) {
-      // Handle invalid or expired token
-      res.clearCookie('user_token');
-      return next();
-    }
-    req.user = user[0];
-    req.newVisitor = false;
-  }
-
-  next();
-});
-
 // Admin routes
 adminRouter.get('/feedback', authenticateAdmin, async (req, res) => {
   console.log('GET request for /admin/feedback');
@@ -169,23 +133,11 @@ adminRouter.get('/feedback', authenticateAdmin, async (req, res) => {
 adminRouter.get('/unique-users', authenticateAdmin, async (req, res) => {
   console.log('GET request for /admin/unique-users');
   try {
-    const [rows] = await pool.query('SELECT COUNT(DISTINCT token) AS unique_users FROM users');
+    const [rows] = await pool.query('SELECT COUNT(DISTINCT username) AS unique_users FROM leaderboard');
+    console.log('Unique usernames in leaderboard query result:', rows); // Add this line to check the result
     res.json(rows[0]);
   } catch (err) {
     console.error('Error retrieving unique usernames in leaderboard:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-adminRouter.get('/retention-rate', authenticateAdmin, async (req, res) => {
-  console.log('GET request for /admin/retention-rate');
-  try {
-    const [totalUsers] = await pool.query('SELECT COUNT(*) AS total FROM users');
-    const [returningUsers] = await pool.query('SELECT COUNT(*) AS returning FROM users WHERE DATE(last_login) > DATE_SUB(CURDATE(), INTERVAL 30 DAY)');
-    const retentionRate = ((returningUsers[0].returning / totalUsers[0].total) * 100).toFixed(2);
-    res.json({ retention_rate: retentionRate });
-  } catch (err) {
-    console.error('Error retrieving retention rate:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -271,7 +223,7 @@ leaderboardRouter.delete('/:difficulty/:category/deleteall', async (req, res) =>
     await pool.query('DELETE FROM leaderboard WHERE difficulty = ? AND category = ?', [difficulty, category]);
     res.status(200).json({ message: `All scores for ${difficulty}-${category} deleted successfully` });
   } catch (err) {
-    console.error(`Error deleting scores for ${difficulty}-${category}:`, err);
+    console.error(`Error deleting scores for ${difficulty}-${category}:, err`);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
