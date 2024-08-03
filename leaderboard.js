@@ -41,6 +41,36 @@ app.use((req, res, next) => {
   next();
 });
 
+// Middleware to verify origin
+const verifyOrigin = (req, res, next) => {
+  const allowedOrigins = [
+    'http://lehislegacy.netlify.app',
+    'https://lehislegacy.netlify.app',
+    'http://lehislegacy.com',
+    'https://lehislegacy.com',
+    // 'http://localhost',
+    // 'http://localhost:5173',
+  ];
+  const origin = req.headers.origin || req.headers.referer;
+  if (origin) {
+    const isAllowed = allowedOrigins.some((allowedOrigin) => origin.startsWith(allowedOrigin));
+    if (!isAllowed) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+  }
+  next();
+};
+
+// Apply verifyOrigin middleware to POST, PUT, DELETE routes
+app.use((req, res, next) => {
+  const method = req.method.toUpperCase();
+  if (['POST', 'PUT', 'DELETE'].includes(method)) {
+    verifyOrigin(req, res, next);
+  } else {
+    next();
+  }
+});
+
 // Export pool and authenticateAdmin for reuse in other modules
 const authenticateAdmin = (req, res, next) => {
   const authHeader = req.headers['authorization'];
