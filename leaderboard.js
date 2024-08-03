@@ -48,8 +48,8 @@ const verifyOrigin = (req, res, next) => {
     'https://lehislegacy.netlify.app',
     'http://lehislegacy.com',
     'https://lehislegacy.com',
-    // 'http://localhost',
-    // 'http://localhost:5173',
+    'http://localhost',
+    'http://localhost:5173',
   ];
   const origin = req.headers.origin || req.headers.referer;
   if (origin) {
