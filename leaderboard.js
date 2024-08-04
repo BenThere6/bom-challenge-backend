@@ -9,7 +9,7 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
-const { initializeMultiplayer, multiplayerRouter } = require('./multiplayer');
+// const { initializeMultiplayer, multiplayerRouter } = require('./multiplayer');
 const leaderboardRouter = express.Router();
 const adminRouter = express.Router();
 const feedbackRouter = express.Router();
