@@ -4,12 +4,9 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const http = require('http');
-require('dotenv').config();
+require('dotenv').config(); // Load environment variables from .env
 
 const app = express();
-const server = http.createServer(app);
-const { initializeMultiplayer, multiplayerRouter } = require('./multiplayer');
 const leaderboardRouter = express.Router();
 const adminRouter = express.Router();
 const feedbackRouter = express.Router();
@@ -103,7 +100,7 @@ const authenticateAdmin = (req, res, next) => {
 
 // User registration
 leaderboardRouter.post('/register', async (req, res) => {
-  const { username, password, role } = req.body;
+  const { username, password, role } = req.body; // Add role to request body
 
   if (!username || !password || !role) {
     console.log('Invalid registration input:', req.body);
@@ -287,13 +284,9 @@ feedbackRouter.post('/', async (req, res) => {
 app.use('/leaderboard', leaderboardRouter);
 app.use('/admin', adminRouter);
 app.use('/feedback', feedbackRouter);
-app.use('/multiplayer', multiplayerRouter);
-
-// Initialize multiplayer functionality
-initializeMultiplayer(server);
 
 // Start the server
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
