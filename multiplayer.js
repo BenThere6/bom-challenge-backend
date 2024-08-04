@@ -1,6 +1,5 @@
 const express = require('express');
 const { Server } = require('socket.io');
-const http = require('http');
 const { v4: uuidv4 } = require('uuid');
 
 const multiplayerRouter = express.Router();
@@ -10,12 +9,7 @@ let io;
 const gameSessions = {};
 
 const initializeMultiplayer = (server) => {
-  io = new Server(server, {
-    cors: {
-      origin: ['http://localhost:5173', 'https://lehislegacy.com', 'http://lehislegacy.com'],
-      methods: ['GET', 'POST']
-    }
-  });
+  io = new Server(server);
 
   io.on('connection', (socket) => {
     console.log(`New client connected: ${socket.id}`);
