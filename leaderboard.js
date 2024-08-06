@@ -122,6 +122,7 @@ const sendEmailNotification = (username, score, difficulty, category) => {
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
       console.error('Error sending email:', error);
+      console.log('Here are the creds we have on file: ' + process.env.EMAIL_PASS, process.env.EMAIL_USER)
     } else {
       console.log('Email sent successfully:', info.response);
     }
