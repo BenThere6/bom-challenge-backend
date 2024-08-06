@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer'); // Add this line
 require('dotenv').config(); // Load environment variables from .env
 
 const app = express();
@@ -95,6 +96,35 @@ const authenticateAdmin = (req, res, next) => {
 
     req.user = user;
     next();
+  });
+};
+
+// Set up Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // Use your email service
+  auth: {
+    user: process.env.EMAIL_USER, // Your email
+    pass: process.env.EMAIL_PASS // Your email password
+  }
+});
+
+// Function to send email
+const sendEmailNotification = (username, score, difficulty, category) => {
+  console.log('Preparing to send email notification for new score:', { username, score, difficulty, category });
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: 'benbirdsall7@gmail.com',
+    subject: 'New Score Posted',
+    text: `A new score has been posted:\n\nUsername: ${username}\nScore: ${score}\nDifficulty: ${difficulty}\nCategory: ${category}`
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error('Error sending email:', error);
+    } else {
+      console.log('Email sent successfully:', info.response);
+    }
   });
 };
 
@@ -240,6 +270,11 @@ leaderboardRouter.post('/:difficulty/:category', async (req, res) => {
     // Fetch the newly inserted score
     const [newScore] = await pool.query('SELECT * FROM leaderboard WHERE id = ?', [result.insertId]);
     res.json(newScore[0]);
+
+    console.log('Score saved successfully:', { username, score, difficulty, category });
+
+    // Send email notification
+    sendEmailNotification(username, score, difficulty, category);
   } catch (err) {
     console.error(`Error saving score for ${difficulty}-${category}:, err`);
     res.status(500).json({ message: 'Internal server error' });
