@@ -116,7 +116,7 @@ const sendEmailNotification = (username, score, difficulty, category) => {
     from: process.env.EMAIL_USER,
     to: 'benbirdsall7@gmail.com',
     subject: 'New Score Posted',
-    text: `A new score has been posted:\n\nUsername: ${username}\nScore: ${score}\nDifficulty: ${difficulty}\nCategory: ${category}`
+    text: `Username: ${username}\nScore: ${score}\nDifficulty: ${difficulty}\nCategory: ${category}`
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
@@ -137,7 +137,7 @@ const sendFeedbackEmailNotification = (username, feedback) => {
     from: process.env.EMAIL_USER,
     to: 'benbirdsall7@gmail.com',
     subject: 'New Feedback Received',
-    text: `New feedback has been submitted:\n\nUsername: ${username}\nFeedback: ${feedback}`
+    text: `Username: ${username}\nFeedback: ${feedback}`
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
