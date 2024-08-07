@@ -129,6 +129,26 @@ const sendEmailNotification = (username, score, difficulty, category) => {
   });
 };
 
+// Function to send feedback email
+const sendFeedbackEmailNotification = (username, feedback) => {
+  console.log('Preparing to send email notification for new feedback:', { username, feedback });
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: 'benbirdsall7@gmail.com',
+    subject: 'New Feedback Received',
+    text: `New feedback has been submitted:\n\nUsername: ${username}\nFeedback: ${feedback}`
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error('Error sending feedback email:', error);
+    } else {
+      console.log('Feedback email sent successfully:', info.response);
+    }
+  });
+};
+
 // User registration
 leaderboardRouter.post('/register', async (req, res) => {
   const { username, password, role } = req.body; // Add role to request body
@@ -310,6 +330,9 @@ feedbackRouter.post('/', async (req, res) => {
     );
 
     res.status(201).json({ message: 'Feedback submitted successfully' });
+
+    // Send email notification
+    sendFeedbackEmailNotification(username, feedback);
   } catch (err) {
     console.error('Error submitting feedback:', err);
     res.status(500).json({ message: 'Internal server error' });
