@@ -162,7 +162,7 @@ leaderboardRouter.post('/register', async (req, res) => {
 });
 
 leaderboardRouter.post('/login', async (req, res) => {
-  const { username, password, rememberMe } = req.body;
+  const { username, password, rememberMe } = req.body; // Add rememberMe to the request body
 
   if (!username || !password) {
     console.log('Invalid login input:', req.body);
@@ -178,9 +178,10 @@ leaderboardRouter.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid username or password' });
     }
 
-    const tokenOptions = rememberMe ? { expiresIn: '30d' } : { expiresIn: '1h' };
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, tokenOptions);
+    // Set token expiration based on the rememberMe flag
+    const expiresIn = rememberMe ? '30d' : '1h'; // 30 days if rememberMe is true, otherwise 1 hour
 
+    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn });
     res.json({ token });
   } catch (err) {
     console.error('Error logging in user:', err);
