@@ -4,28 +4,25 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer'); // Add this line
-require('dotenv').config(); // Load environment variables from .env
+const nodemailer = require('nodemailer');
+require('dotenv').config();
 
 const app = express();
 const leaderboardRouter = express.Router();
 const adminRouter = express.Router();
 const feedbackRouter = express.Router();
 
-// Create a new pool using the local MySQL environment variables
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  port: process.env.DB_PORT
+  port: process.env.DB_PORT,
 });
 
-// Middleware
 app.use(bodyParser.json());
 app.use(cors());
 
-// Manually set CORS headers for all responses
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -33,16 +30,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
-// Log incoming requests for debugging
 app.use((req, res, next) => {
   console.log(`${req.method} request for '${req.url}'`);
   next();
 });
 
-// Middleware to verify origin
 const verifyOrigin = (req, res, next) => {
   const allowedOrigins = [
     'http://lehislegacy.netlify.app',
@@ -62,7 +56,6 @@ const verifyOrigin = (req, res, next) => {
   next();
 };
 
-// Apply verifyOrigin middleware to POST, PUT, DELETE routes
 app.use((req, res, next) => {
   const method = req.method.toUpperCase();
   if (['POST', 'PUT', 'DELETE'].includes(method)) {
@@ -72,7 +65,6 @@ app.use((req, res, next) => {
   }
 });
 
-// Export pool and authenticateAdmin for reuse in other modules
 const authenticateAdmin = (req, res, next) => {
   const authHeader = req.headers['authorization'];
 
@@ -99,16 +91,14 @@ const authenticateAdmin = (req, res, next) => {
   });
 };
 
-// Set up Nodemailer transporter
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // Use your email service
+  service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER, // Your email
-    pass: process.env.EMAIL_PASS // Your email password
-  }
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
-// Function to send email
 const sendEmailNotification = (username, score, difficulty, category) => {
   console.log('Preparing to send email notification for new score:', { username, score, difficulty, category });
 
@@ -116,20 +106,19 @@ const sendEmailNotification = (username, score, difficulty, category) => {
     from: process.env.EMAIL_USER,
     to: 'benbirdsall7@gmail.com',
     subject: 'New Score Posted',
-    text: `Username: ${username}\nScore: ${score}\nDifficulty: ${difficulty}\nCategory: ${category}`
+    text: `Username: ${username}\nScore: ${score}\nDifficulty: ${difficulty}\nCategory: ${category}`,
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
       console.error('Error sending email:', error);
-      console.log('Here are the creds we have on file: ' + process.env.EMAIL_PASS, process.env.EMAIL_USER, process.env.DB_HOST)
+      console.log('Here are the creds we have on file: ' + process.env.EMAIL_PASS, process.env.EMAIL_USER, process.env.DB_HOST);
     } else {
       console.log('Email sent successfully:', info.response);
     }
   });
 };
 
-// Function to send feedback email
 const sendFeedbackEmailNotification = (username, feedback) => {
   console.log('Preparing to send email notification for new feedback:', { username, feedback });
 
@@ -137,7 +126,7 @@ const sendFeedbackEmailNotification = (username, feedback) => {
     from: process.env.EMAIL_USER,
     to: 'benbirdsall7@gmail.com',
     subject: 'New Feedback Received',
-    text: `Username: ${username}\nFeedback: ${feedback}`
+    text: `Username: ${username}\nFeedback: ${feedback}`,
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
@@ -149,9 +138,8 @@ const sendFeedbackEmailNotification = (username, feedback) => {
   });
 };
 
-// User registration
 leaderboardRouter.post('/register', async (req, res) => {
-  const { username, password, role } = req.body; // Add role to request body
+  const { username, password, role } = req.body;
 
   if (!username || !password || !role) {
     console.log('Invalid registration input:', req.body);
@@ -173,9 +161,8 @@ leaderboardRouter.post('/register', async (req, res) => {
   }
 });
 
-// User login
 leaderboardRouter.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, rememberMe } = req.body;
 
   if (!username || !password) {
     console.log('Invalid login input:', req.body);
@@ -191,7 +178,9 @@ leaderboardRouter.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid username or password' });
     }
 
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+    const tokenOptions = rememberMe ? { expiresIn: '30d' } : { expiresIn: '1h' };
+    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, tokenOptions);
+
     res.json({ token });
   } catch (err) {
     console.error('Error logging in user:', err);
@@ -199,7 +188,6 @@ leaderboardRouter.post('/login', async (req, res) => {
   }
 });
 
-// Admin routes
 adminRouter.get('/feedback', authenticateAdmin, async (req, res) => {
   console.log('GET request for /admin/feedback');
   try {
@@ -215,7 +203,7 @@ adminRouter.get('/unique-users', authenticateAdmin, async (req, res) => {
   console.log('GET request for /admin/unique-users');
   try {
     const [rows] = await pool.query('SELECT COUNT(DISTINCT username) AS unique_users FROM leaderboard');
-    console.log('Unique usernames in leaderboard query result:', rows); // Add this line to check the result
+    console.log('Unique usernames in leaderboard query result:', rows);
     res.json(rows[0]);
   } catch (err) {
     console.error('Error retrieving unique usernames in leaderboard:', err);
@@ -234,7 +222,6 @@ adminRouter.get('/scores', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Delete a specific feedback
 adminRouter.delete('/feedback/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   try {
@@ -246,7 +233,6 @@ adminRouter.delete('/feedback/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Delete a specific score
 adminRouter.delete('/scores/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   try {
@@ -258,7 +244,6 @@ adminRouter.delete('/scores/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Leaderboard routes
 leaderboardRouter.get('/:difficulty/:category', async (req, res) => {
   const { difficulty, category } = req.params;
   console.log(`GET request for leaderboard with difficulty: ${difficulty} and category: ${category}`);
@@ -271,12 +256,10 @@ leaderboardRouter.get('/:difficulty/:category', async (req, res) => {
   }
 });
 
-// Save a new score for a specific difficulty and category
 leaderboardRouter.post('/:difficulty/:category', async (req, res) => {
   const { difficulty, category } = req.params;
   const { username, score } = req.body;
 
-  // Validate input
   if (!username || typeof score !== 'number') {
     console.error('Invalid input: username and score are required');
     return res.status(400).json({ message: 'Invalid input: username and score are required' });
@@ -288,13 +271,11 @@ leaderboardRouter.post('/:difficulty/:category', async (req, res) => {
       [username, score, difficulty, category, new Date()]
     );
 
-    // Fetch the newly inserted score
     const [newScore] = await pool.query('SELECT * FROM leaderboard WHERE id = ?', [result.insertId]);
     res.json(newScore[0]);
 
     console.log('Score saved successfully:', { username, score, difficulty, category });
 
-    // Send email notification
     sendEmailNotification(username, score, difficulty, category);
   } catch (err) {
     console.error(`Error saving score for ${difficulty}-${category}:, err`);
@@ -302,7 +283,6 @@ leaderboardRouter.post('/:difficulty/:category', async (req, res) => {
   }
 });
 
-// Delete all scores for a specific difficulty and category
 leaderboardRouter.delete('/:difficulty/:category/deleteall', async (req, res) => {
   const { difficulty, category } = req.params;
   try {
@@ -314,7 +294,6 @@ leaderboardRouter.delete('/:difficulty/:category/deleteall', async (req, res) =>
   }
 });
 
-// POST feedback
 feedbackRouter.post('/', async (req, res) => {
   const { username, feedback } = req.body;
 
@@ -331,7 +310,6 @@ feedbackRouter.post('/', async (req, res) => {
 
     res.status(201).json({ message: 'Feedback submitted successfully' });
 
-    // Send email notification
     sendFeedbackEmailNotification(username, feedback);
   } catch (err) {
     console.error('Error submitting feedback:', err);
@@ -339,12 +317,10 @@ feedbackRouter.post('/', async (req, res) => {
   }
 });
 
-// Use the routers for the API routes
 app.use('/leaderboard', leaderboardRouter);
 app.use('/admin', adminRouter);
 app.use('/feedback', feedbackRouter);
 
-// Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
