@@ -11,6 +11,7 @@ const app = express();
 const leaderboardRouter = express.Router();
 const adminRouter = express.Router();
 const feedbackRouter = express.Router();
+const multipleChoiceRouter = require('./routes/multipleChoice'); // Import the new route
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -321,6 +322,7 @@ feedbackRouter.post('/', async (req, res) => {
 app.use('/leaderboard', leaderboardRouter);
 app.use('/admin', adminRouter);
 app.use('/feedback', feedbackRouter);
+app.use('/multiple-choice', multipleChoiceRouter); // Add the multiple choice router
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
