@@ -11,7 +11,6 @@ const app = express();
 const leaderboardRouter = express.Router();
 const adminRouter = express.Router();
 const feedbackRouter = express.Router();
-const multipleChoiceRouter = require('./routes/multipleChoice'); // Import the new route
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -22,7 +21,11 @@ const pool = mysql.createPool({
 });
 
 app.use(bodyParser.json());
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://lehislegacy.netlify.app', 'https://lehislegacy.com'], // Add your frontend origins here
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
