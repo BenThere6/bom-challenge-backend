@@ -249,10 +249,13 @@ leaderboardRouter.get('/:difficulty/:category', async (req, res) => {
   const { difficulty, category } = req.params;
   console.log(`GET request for leaderboard with difficulty: ${difficulty} and category: ${category}`);
   try {
-    const [rows] = await pool.query('SELECT username, score, created_at FROM leaderboard WHERE difficulty = ? AND category = ? ORDER BY score DESC LIMIT 10', [difficulty, category]);
+    const [rows] = await pool.query(
+      'SELECT username, score, created_at FROM leaderboard WHERE difficulty = ? AND category = ? ORDER BY score DESC LIMIT 100', 
+      [difficulty, category]
+    );
     res.json(rows);
   } catch (err) {
-    console.error(`Error retrieving ${difficulty}-${category} leaderboard:, err`);
+    console.error(`Error retrieving ${difficulty}-${category} leaderboard:`, err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
