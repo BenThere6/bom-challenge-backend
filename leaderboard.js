@@ -23,14 +23,18 @@ const pool = mysql.createPool({
 });
 
 app.use(bodyParser.json());
-app.use(cors());
-
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  next();
-});
+app.use(cors({
+  origin: [
+    'http://lehislegacy.netlify.app',
+    'https://lehislegacy.netlify.app',
+    'http://lehislegacy.com',
+    'https://lehislegacy.com',
+    'http://localhost:5173',
+  ],
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 

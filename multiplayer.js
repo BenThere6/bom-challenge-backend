@@ -9,7 +9,19 @@ let io;
 const gameSessions = {};
 
 const initializeMultiplayer = (server) => {
-  io = new Server(server);
+  io = new Server(server, {
+    cors: {
+      origin: [
+        'http://lehislegacy.netlify.app',
+        'https://lehislegacy.netlify.app',
+        'http://lehislegacy.com',
+        'https://lehislegacy.com',
+        'http://localhost:5173',
+      ],
+      methods: ['GET', 'POST'],
+      credentials: true,
+    },
+  });
 
   io.on('connection', (socket) => {
     console.log(`New client connected: ${socket.id}`);
