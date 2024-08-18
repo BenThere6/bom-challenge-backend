@@ -1,9 +1,25 @@
 const express = require('express');
 const { Server } = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
+const path = require('path');
 
 const multiplayerRouter = express.Router();
 let io;
+
+// Load the verses and their indexes from the CSV file
+const verses = [];
+const loadVerses = () => {
+  const csvPath = path.join(__dirname, 'data', 'verses.csv');
+  const data = fs.readFileSync(csvPath, 'utf-8');
+  const lines = data.split('\n');
+  lines.forEach((line, index) => {
+    const [reference, verse] = line.split(',');
+    verses.push({ reference, verse, index });
+  });
+};
+
+loadVerses(); // Load the verses into memory
 
 // Store active game sessions
 const gameSessions = {};
@@ -26,15 +42,15 @@ const initializeMultiplayer = (server) => {
   io.on('connection', (socket) => {
     console.log(`New client connected: ${socket.id}`);
 
-    socket.on('createGame', ({ difficulty, rounds }) => {
+    socket.on('createGame', () => {
       const sessionId = uuidv4().slice(0, 5).toUpperCase();
       gameSessions[sessionId] = {
         host: socket.id,
         players: [{ id: socket.id, score: 0 }],
-        difficulty,
-        rounds,
+        rounds: 5, // You can adjust the default number of rounds
         currentRound: 0,
         state: {},
+        correctVerseIndex: Math.floor(Math.random() * verses.length), // Randomly select a correct verse index
       };
       socket.join(sessionId);
       socket.emit('gameCreated', sessionId);
@@ -52,25 +68,28 @@ const initializeMultiplayer = (server) => {
       }
     });
 
-    socket.on('startGame', (sessionId) => {
+    socket.on('startGame', (sessionId, rounds) => {
       const session = gameSessions[sessionId];
       if (session && session.host === socket.id) {
         session.currentRound = 1;
-        io.to(sessionId).emit('gameStarted', { difficulty: session.difficulty, rounds: session.rounds });
+        io.to(sessionId).emit('gameStarted', { rounds: session.rounds });
         startRound(sessionId);
       }
     });
 
-    socket.on('submitGuess', (sessionId, guess) => {
+    socket.on('submitGuess', (sessionId, guessedVerseIndex) => {
       const session = gameSessions[sessionId];
       if (session) {
         const player = session.players.find((p) => p.id === socket.id);
         if (player) {
-          // Here you should calculate the score based on the guess and correct verse
-          const points = calculatePoints(guess, session.currentRound); // Placeholder function
+          // Get the correct verse index for the current round
+          const correctVerseIndex = session.correctVerseIndex;
+          
+          // Calculate the score
+          const points = calculatePoints(correctVerseIndex, guessedVerseIndex);
           player.score += points;
-
-          io.to(sessionId).emit('guessSubmitted', { playerId: socket.id, guess, points });
+    
+          io.to(sessionId).emit('guessSubmitted', { playerId: socket.id, guess: guessedVerseIndex, points });
           checkRoundEnd(sessionId);
         }
       } else {
@@ -108,6 +127,8 @@ const endRound = (sessionId) => {
 
     if (session.currentRound < session.rounds) {
       session.currentRound++;
+      // Choose a new correct verse for the next round
+      session.correctVerseIndex = Math.floor(Math.random() * verses.length);
       startRound(sessionId);
     } else {
       endGame(sessionId);
@@ -138,10 +159,10 @@ const endGame = (sessionId) => {
   }
 };
 
-const calculatePoints = (guess, round) => {
-  // Implement your point calculation logic based on the guess and correct verse
-  // For example, you could calculate the distance between the guessed verse and the correct one
-  return Math.max(0, 100 - Math.abs(guess - correctVerse));
+const calculatePoints = (correctVerseIndex, guessedVerseIndex) => {
+  const maxScore = 100;
+  const distance = Math.abs(correctVerseIndex - guessedVerseIndex);
+  return Math.max(0, maxScore - distance);
 };
 
 // Define a route for getting active sessions (for testing purposes)
