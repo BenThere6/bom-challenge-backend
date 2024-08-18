@@ -5,6 +5,8 @@ const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const { initializeMultiplayer, multiplayerRouter } = require('./multiplayer'); // Import multiplayer
+
 require('dotenv').config();
 
 const app = express();
@@ -321,11 +323,13 @@ feedbackRouter.post('/', async (req, res) => {
   }
 });
 
-app.use('/leaderboard', leaderboardRouter);
-app.use('/admin', adminRouter);
-app.use('/feedback', feedbackRouter);
+// Add multiplayer routes
+app.use('/multiplayer', multiplayerRouter);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// Initialize multiplayer with the server instance
+initializeMultiplayer(server);
