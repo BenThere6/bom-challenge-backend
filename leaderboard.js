@@ -266,6 +266,32 @@ leaderboardRouter.get('/:difficulty/:category', async (req, res) => {
   }
 });
 
+// Add this to your leaderboardRouter or create a new router if needed
+
+leaderboardRouter.post('/special-message-seen', async (req, res) => {
+  const { username } = req.body;
+
+  if (!username) {
+    return res.status(400).json({ message: 'Username is required' });
+  }
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: 'benbirdsall7@gmail.com', // your email
+    subject: 'Special Message Seen',
+    text: `The special message was seen by: ${username}`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Special message seen email sent successfully');
+    res.status(200).json({ message: 'Email sent successfully' });
+  } catch (error) {
+    console.error('Error sending special message seen email:', error);
+    res.status(500).json({ message: 'Failed to send email' });
+  }
+});
+
 leaderboardRouter.post('/:difficulty/:category', async (req, res) => {
   const { difficulty, category } = req.params;
   const { username, score } = req.body;
