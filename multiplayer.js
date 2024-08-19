@@ -82,21 +82,15 @@ const initializeMultiplayer = (server) => {
       if (session) {
         const player = session.players.find((p) => p.id === socket.id);
         if (player) {
-          // Get the correct verse index for the current round
-          const correctVerseIndex = session.correctVerseIndex;
-          
-          // Calculate the score
-          const points = calculatePoints(correctVerseIndex, guessedVerseIndex);
-          player.score += points;
-    
-          io.to(sessionId).emit('guessSubmitted', { playerId: socket.id, guess: guessedVerseIndex, points });
+          player.guess = guessedVerseIndex; // Store the player's guess
+          io.to(sessionId).emit('guessSubmitted', { playerId: socket.id, guess: guessedVerseIndex });
           checkRoundEnd(sessionId);
         }
       } else {
         socket.emit('error', 'Invalid session ID');
       }
     });
-
+    
     socket.on('disconnect', () => {
       console.log(`Client disconnected: ${socket.id}`);
       // Handle player disconnection and cleanup if necessary
@@ -122,6 +116,28 @@ const endRound = (sessionId) => {
   const session = gameSessions[sessionId];
   if (session) {
     clearTimeout(session.state.timer);
+
+    // Rank players based on their distance from the correct verse
+    const correctVerseIndex = session.correctVerseIndex;
+    session.players.forEach((player) => {
+      player.distance = Math.abs(correctVerseIndex - player.guess);
+    });
+
+    // Sort players by distance from the correct verse (smallest distance first)
+    session.players.sort((a, b) => a.distance - b.distance);
+
+    // Assign points based on their rank
+    let points = 100;
+    session.players.forEach((player, index) => {
+      if (index > 0 && player.distance === session.players[index - 1].distance) {
+        // If this player has the same distance as the previous player, they get the same points
+        player.score += points;
+      } else {
+        // Otherwise, decrement points by 10 for each subsequent player
+        player.score += points;
+        points = Math.max(0, points - 10); // Decrease points but ensure it doesn't go below 0
+      }
+    });
 
     io.to(sessionId).emit('roundEnded', session.currentRound, session.players);
 
@@ -159,11 +175,11 @@ const endGame = (sessionId) => {
   }
 };
 
-const calculatePoints = (correctVerseIndex, guessedVerseIndex) => {
-  const maxScore = 100;
-  const distance = Math.abs(correctVerseIndex - guessedVerseIndex);
-  return Math.max(0, maxScore - distance);
-};
+// const calculatePoints = (correctVerseIndex, guessedVerseIndex) => {
+//   const maxScore = 100;
+//   const distance = Math.abs(correctVerseIndex - guessedVerseIndex);
+//   return Math.max(0, maxScore - distance);
+// };
 
 // Define a route for getting active sessions (for testing purposes)
 multiplayerRouter.get('/sessions', (req, res) => {
