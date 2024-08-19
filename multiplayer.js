@@ -90,7 +90,7 @@ const initializeMultiplayer = (server) => {
         socket.emit('error', 'Invalid session ID');
       }
     });
-    
+
     socket.on('disconnect', () => {
       console.log(`Client disconnected: ${socket.id}`);
       // Handle player disconnection and cleanup if necessary
@@ -101,14 +101,23 @@ const initializeMultiplayer = (server) => {
 const startRound = (sessionId) => {
   const session = gameSessions[sessionId];
   if (session) {
-    io.to(sessionId).emit('roundStarted', session.currentRound);
+    // Get the correct verse based on the correctVerseIndex
+    const correctVerse = verses[session.correctVerseIndex].verse;
+    session.currentVerse = correctVerse; // Assign the correct verse to session.currentVerse
+    
+    const roundDuration = 60; // Round duration in seconds
+
+    io.to(sessionId).emit('roundStarted', {
+      currentRound: session.currentRound,
+      verse: session.currentVerse, // Use session.currentVerse here
+      duration: roundDuration,
+      players: session.players
+    });
 
     // Start a timer for the round
-    const roundTimer = setTimeout(() => {
+    session.state.timer = setTimeout(() => {
       endRound(sessionId);
-    }, 60000); // 60 seconds per round (adjust as needed)
-
-    session.state.timer = roundTimer;
+    }, roundDuration * 1000); // Use the round duration here
   }
 };
 
